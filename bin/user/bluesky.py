@@ -1,40 +1,32 @@
 # Copyright 2014-2020 Matthew Wall
 """
-Tweet weather data
+Post weather data
 
-You must first obtain app and oauth credentials in order to tweet.  See the
-twitter developer documentation to obtain these:
-
-  https://dev.twitter.com/oauth/overview
-
-Specifically, you will need four things:  app_key, app_key_secret, oauth_token,
-and oauth_token_secret.
+You'll need the username and password of your account:
 
 [StdRESTful]
-    [[Twitter]]
-        app_key = APP_KEY
-        app_key_secret = APP_KEY_SECRET
-        oauth_token = OAUTH_TOKEN
-        oauth_token_secret = OAUTH_TOKEN_SECRET
+    [[BlueSky]]
+        username = USERNAME
+        password = PASSWORD
 
-Tweets look something like this:
+Posts look something like this:
 
 STATION_IDENTIFIER: Ws: 0.0; Wd: -; Wg: 1.1; oT: 7.00; oH: 97.00; P: 1025.307; R: 0.000
 
 The STATION_IDENTIFIER is the first part of the station 'location' defined in
-weewx.conf.  To specify a different identifier for tweets, use the 'station'
+weewx.conf.  To specify a different identifier for posts, use the 'station'
 parameter.  For example:
 
 [StdRESTful]
-    [[Twitter]]
+    [[BlueSky]]
         station = hal
 
-The 'format' parameter determines the tweet contents.  The default format is:
+The 'format' parameter determines the post contents.  The default format is:
 
 format = {station:%.8s}: Ws: {windSpeed:%.1f}; Wd: {windDir:%03.0f}; Wg: {windGust:%.1f}; oT: {outTemp:%.1f}; oH: {outHumidity:%.2f}; P: {barometer:%.3f}; R: {rain:%.3f}
 
-To specify a different tweet message, use the format parameter.  For example,
-this would tweet only wind information:
+To specify a different post message, use the format parameter.  For example,
+this would post only wind information:
 
 [StdRESTful]
     [[Twitter]]
@@ -116,9 +108,10 @@ import weewx.restx
 import weewx.units
 from weeutil.weeutil import to_bool, accumulateLeaves
 
-from twython import Twython, TwythonError, TwythonAuthError, TwythonRateLimitError
+from atproto import Client
+from atproto_client.exceptions import UnauthorizedError
 
-VERSION = "0.15"
+VERSION = "0.1"
 
 if weewx.__version__ < "3":
     raise weewx.UnsupportedFeature("weewx 3 is required, found %s" %
@@ -138,7 +131,7 @@ def _dir_to_ord(x, ordinals):
     return ordinals[17]
 
 
-class Twitter(weewx.restx.StdRESTbase):
+class BlueSky(weewx.restx.StdRESTbase):
 
     _DEFAULT_FORMAT = '{station:%.8s}: Ws: {windSpeed:%.1f}; Wd: {windDir:%03.0f}; Wg: {windGust:%.1f}; oT: {outTemp:%.1f}; oH: {outHumidity:%.2f}; P: {barometer:%.3f}; R: {rain:%.3f}'
     _DEFAULT_FORMAT_NONE = '-'
@@ -150,11 +143,9 @@ class Twitter(weewx.restx.StdRESTbase):
 
         Required parameters:
 
-        twitter authentication credentials:
-        app_key
-        app_key_secret
-        oauth_token
-        oauth_token_secret
+        BlueSky authentication credentials:
+        username
+        password
 
         Optional parameters:
 
@@ -175,12 +166,18 @@ class Twitter(weewx.restx.StdRESTbase):
 
         binding: either loop or archive
         Default is archive
+
+        TODO
+        website: add website card into post
+        Default is False
+
+        language: specify post language
+        Default is en
         """
-        super(Twitter, self).__init__(engine, config_dict)
+        super(BlueSky, self).__init__(engine, config_dict)
         loginf('service version is %s' % VERSION)
 
-        site_dict = weewx.restx.get_site_dict(config_dict, 'Twitter', 'app_key', 'app_key_secret',
-                                              'oauth_token', 'oauth_token_secret')
+        site_dict = weewx.restx.get_site_dict(config_dict, 'BlueSky', 'username', 'password')
         if site_dict is None:
             return
 
@@ -208,7 +205,7 @@ class Twitter(weewx.restx.StdRESTbase):
         loginf('binding is %s' % binding)
 
         self.data_queue = queue.Queue()
-        data_thread = TwitterThread(self.data_queue, **site_dict)
+        data_thread = BlueSkyThread(self.data_queue, **site_dict)
         data_thread.start()
 
         if 'loop' in binding.lower():
@@ -216,7 +213,7 @@ class Twitter(weewx.restx.StdRESTbase):
         if 'archive' in binding.lower():
             self.bind(weewx.NEW_ARCHIVE_RECORD, self.handle_new_archive)
 
-        loginf("Data will be tweeted for %s" % site_dict['station'])
+        loginf("Data will be posted for %s" % site_dict['station'])
 
     def handle_new_loop(self, event):
         # Make a copy... we will modify it
@@ -230,16 +227,16 @@ class Twitter(weewx.restx.StdRESTbase):
         record['binding'] = 'archive'
         self.data_queue.put(record)
 
-class TwitterThread(weewx.restx.RESTThread):
+class BlueSkyThread(weewx.restx.RESTThread):
     def __init__(self, queue, 
-                 app_key, app_key_secret, oauth_token, oauth_token_secret,
+                 username, password,
                  station, format, format_None, ordinals, format_utc=True,
                  unit_system=None, skip_upload=False,
                  log_success=True, log_failure=True,
                  post_interval=None, max_backlog=sys.maxsize, stale=None,
                  timeout=60, max_tries=3, retry_wait=5):
-        super(TwitterThread, self).__init__(queue,
-                                            protocol_name='Twitter',
+        super(BlueSkyThread, self).__init__(queue,
+                                            protocol_name='BlueSky',
                                             manager_dict=None,
                                             post_interval=post_interval,
                                             max_backlog=max_backlog,
@@ -249,10 +246,8 @@ class TwitterThread(weewx.restx.RESTThread):
                                             max_tries=max_tries,
                                             timeout=timeout,
                                             retry_wait=retry_wait)
-        self.app_key = app_key
-        self.app_key_secret = app_key_secret
-        self.oauth_token = oauth_token
-        self.oauth_token_secret = oauth_token_secret
+        self.username = username
+        self.password = password
         self.station = station
         self.format = format
         self.format_None = format_None
@@ -261,7 +256,7 @@ class TwitterThread(weewx.restx.RESTThread):
         self.unit_system = unit_system
         self.skip_upload = to_bool(skip_upload)
 
-    def format_tweet(self, record):
+    def format_post(self, record):
         msg = self.format
         for obs in record:
             oldstr = None
@@ -298,7 +293,7 @@ class TwitterThread(weewx.restx.RESTThread):
             record = weewx.units.to_std_system(record, self.unit_system)
         record['station'] = self.station
 
-        msg = self.format_tweet(record)
+        msg = self.format_post(record)
         if self.skip_upload:
             loginf('skipping upload')
             return
@@ -308,13 +303,14 @@ class TwitterThread(weewx.restx.RESTThread):
         while ntries < self.max_tries:
             ntries += 1
             try:
-                twitter = Twython(self.app_key, self.app_key_secret,
-                                  self.oauth_token, self.oauth_token_secret)
-                twitter.update_status(status=msg)
+                client = Client()
+                client.login(self.username, self.password)
+                post = client.send_post(text=msg)
+                # TODO add website card to post
                 return
-            except TwythonAuthError as e:
+            except UnauthorizedError as e:
                 raise weewx.restx.FailedPost("Authorization failed: %s" % e)
-            except (TwythonError, TwythonRateLimitError) as e:
+            except Exception as e:
                 logerr("Failed attempt %d of %d: %s" %
                        (ntries, self.max_tries, e))
                 logdbg("Waiting %d seconds before retry" % self.retry_wait)

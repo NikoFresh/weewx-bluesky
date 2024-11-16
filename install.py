@@ -6,24 +6,22 @@ from weecfg.extension import ExtensionInstaller
 
 
 def loader():
-    return TwitterInstaller()
+    return BlueSkyInstaller()
 
 
-class TwitterInstaller(ExtensionInstaller):
+class BlueSkyInstaller(ExtensionInstaller):
     def __init__(self):
-        super(TwitterInstaller, self).__init__(
-            version="0.15",
-            name='twitter',
-            description='tweet weather data',
-            author="Matthew Wall",
-            author_email="mwall@users.sourceforge.net",
-            restful_services='user.twitter.Twitter',
+        super(BlueSkyInstaller, self).__init__(
+            version="0.1",
+            name='bluesky',
+            description='publish weather data on bluesky',
+            author="Nicolò Frescura",
+            author_email="nicolo.frescura@pm.me",
+            restful_services='user.bluesky.BlueSky',
             config={
                 'StdRESTful': {
-                    'Twitter': {
-                        'app_key': 'APP_KEY',
-                        'app_key_secret': 'APP_KEY_SECRET',
-                        'oauth_token': 'OAUTH_TOKEN',
-                        'oauth_token_secret': 'OAUTH_TOKEN_SECRET'}}},
-            files=[('bin/user', ['bin/user/twitter.py'])]
+                    'BlueSky': {
+                        'username': 'USERNAME',
+                        'password': 'PASSWORD'}}},
+            files=[('bin/user', ['bin/user/bluesky.py'])]
         )

@@ -1,19 +1,16 @@
-twitter - weewx extension that sends data to Twitter
+WIP
+
+
+bluesky - weewx extension that sends data to BlueSky
 Copyright 2014-2020 Matthew Wall
 Distributed under the terms of the GNU Public License (GPLv3)
 
 ===============================================================================
 Pre-requisites
 
-Install the twitter python bindings
+Install the atproto python bindings
 
-For python3:
-
-sudo pip3 install twython
-
-For python2:
-
-sudo pip install twython
+sudo pip3 install atproto
 
 
 ===============================================================================
