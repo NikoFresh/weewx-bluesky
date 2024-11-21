@@ -200,6 +200,8 @@ class BlueSky(weewx.restx.StdRESTbase):
         site_dict['format_utc'] = to_bool(site_dict.get('format_utc'))
         site_dict.setdefault('ordinals', self._DEFAULT_ORDINALS)
         site_dict.setdefault('website', False)
+        site_dict.setdefault('website_title', '')
+        site_dict.setdefault('website_description', '')
 
         # we can bind to archive or loop events, default to archive
         binding = site_dict.pop('binding', 'archive')
@@ -234,7 +236,8 @@ class BlueSkyThread(weewx.restx.RESTThread):
     def __init__(self, queue, 
                  username, password,
                  station, format, format_None, 
-                 ordinals, website, website_url, format_utc=True,
+                 ordinals, website, website_url, 
+                 website_title, website_description, format_utc=True,
                  unit_system=None, skip_upload=False,
                  log_success=True, log_failure=True,
                  post_interval=None, max_backlog=sys.maxsize, stale=None,
@@ -261,6 +264,8 @@ class BlueSkyThread(weewx.restx.RESTThread):
         self.skip_upload = to_bool(skip_upload)
         self.website = website
         self.website_url = website_url
+        self.website_title = website_title
+        self.website_description = website_description
 
     def format_post(self, record):
         msg = self.format
@@ -309,10 +314,10 @@ class BlueSkyThread(weewx.restx.RESTThread):
         if self.website:
             embed = models.AppBskyEmbedExternal.Main(
                 external=models.AppBskyEmbedExternal.External(
-                    # TODO add title, description, thumb
-                    # title='Bluesky Social',
-                    # description='See what\'s next.',
+                    title=self.website_title,
+                    description=self.website_description,
                     uri=self.website_url,
+                    # TODO add thumb
                     # thumb=thumb.blob,
                 )
             )

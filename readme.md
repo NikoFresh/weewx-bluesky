@@ -51,11 +51,14 @@ This is how a full configuration looks like:
         password = PASSWORD  # Required
         station = hal        # Name of the weather station
         format = {station:%.8s}: Ws: {windSpeed:%.1f}, Wd: {windDir:%03.0f}, Wg: {windGust:%.1f}, oT: {outTemp:%.1f}, oH: {outHumidity:%.2f}, P: {barometer:%.3f}, R: {rain:%.3f}  # Default message format
-        format_None = -  # How a missing value has to be displayed
-        format_utc = False  # When True display date and time in UTC format instead of local
+        format_None = -      # How a missing value has to be displayed
+        format_utc = False   # When True display date and time in UTC format instead of local
         unit_system = METRICWX  # US, METRIC, METRICWX
-        website = False  # Set to True to enable website embed
+        website = False      # Set to True to enable website embed
         website_url = https://example.com  # Defaults to station_url from weewx.conf
+        website_title = hal
+        website_description = Live weather data
+
 ```
 
 ## License
