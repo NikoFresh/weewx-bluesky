@@ -111,7 +111,7 @@ from weeutil.weeutil import to_bool, accumulateLeaves
 from atproto import Client, models
 from atproto_client.exceptions import UnauthorizedError
 
-VERSION = "0.1"
+VERSION = "0.2"
 
 if weewx.__version__ < "3":
     raise weewx.UnsupportedFeature("weewx 3 is required, found %s" %
@@ -167,10 +167,10 @@ class BlueSky(weewx.restx.StdRESTbase):
         binding: either loop or archive
         Default is archive
 
-        TODO
-        website: add website card into post
+        website: website card into post
         Default is False
 
+        TODO
         language: specify post language
         Default is en
         """
