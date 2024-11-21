@@ -108,7 +108,7 @@ import weewx.restx
 import weewx.units
 from weeutil.weeutil import to_bool, accumulateLeaves
 
-from atproto import Client
+from atproto import Client, models
 from atproto_client.exceptions import UnauthorizedError
 
 VERSION = "0.1"
@@ -183,6 +183,8 @@ class BlueSky(weewx.restx.StdRESTbase):
 
         # default the station name
         site_dict.setdefault('station', engine.stn_info.location)
+        # default station url
+        site_dict.setdefault('website_url', engine.stn_info.station_url)
 
         # if a unit system was specified, get the weewx constant for it.
         # do it here so a bogus unit system will cause weewx to die
@@ -197,6 +199,7 @@ class BlueSky(weewx.restx.StdRESTbase):
         site_dict.setdefault('format_utc', False)
         site_dict['format_utc'] = to_bool(site_dict.get('format_utc'))
         site_dict.setdefault('ordinals', self._DEFAULT_ORDINALS)
+        site_dict.setdefault('website', False)
 
         # we can bind to archive or loop events, default to archive
         binding = site_dict.pop('binding', 'archive')
@@ -230,7 +233,8 @@ class BlueSky(weewx.restx.StdRESTbase):
 class BlueSkyThread(weewx.restx.RESTThread):
     def __init__(self, queue, 
                  username, password,
-                 station, format, format_None, ordinals, format_utc=True,
+                 station, format, format_None, 
+                 ordinals, website, website_url, format_utc=True,
                  unit_system=None, skip_upload=False,
                  log_success=True, log_failure=True,
                  post_interval=None, max_backlog=sys.maxsize, stale=None,
@@ -255,6 +259,8 @@ class BlueSkyThread(weewx.restx.RESTThread):
         self.format_utc = format_utc
         self.unit_system = unit_system
         self.skip_upload = to_bool(skip_upload)
+        self.website = website
+        self.website_url = website_url
 
     def format_post(self, record):
         msg = self.format
@@ -298,6 +304,18 @@ class BlueSkyThread(weewx.restx.RESTThread):
             loginf('skipping upload')
             return
 
+        # add website card to post
+        embed = ""
+        if self.website:
+            embed = models.AppBskyEmbedExternal.Main(
+                external=models.AppBskyEmbedExternal.External(
+                    # TODO add title, description, thumb
+                    # title='Bluesky Social',
+                    # description='See what\'s next.',
+                    uri=self.website_url,
+                    # thumb=thumb.blob,
+                )
+            )
         # now do the posting
         ntries = 0
         while ntries < self.max_tries:
@@ -305,8 +323,7 @@ class BlueSkyThread(weewx.restx.RESTThread):
             try:
                 client = Client()
                 client.login(self.username, self.password)
-                post = client.send_post(text=msg)
-                # TODO add website card to post
+                post = client.send_post(text=msg, embed=embed)
                 return
             except UnauthorizedError as e:
                 raise weewx.restx.FailedPost("Authorization failed: %s" % e)

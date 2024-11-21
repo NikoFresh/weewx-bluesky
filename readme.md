@@ -54,6 +54,8 @@ This is how a full configuration looks like:
         format_None = -  # How a missing value has to be displayed
         format_utc = False  # When True display date and time in UTC format instead of local
         unit_system = METRICWX  # US, METRIC, METRICWX
+        website = False  # Set to True to enable website embed
+        website_url = https://example.com  # Defaults to station_url from weewx.conf
 ```
 
 ## License
